@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adaptive Resource Allocation System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🖥️ Adaptive Resource Allocation System</h1>
+            <p>Dynamic Multiprogramming Resource Manager</p>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" onclick="startSimulation()">▶️ Start Monitoring</button>
+            <button class="btn btn-danger" onclick="stopSimulation()">⏹️ Stop</button>
+            <button class="btn btn-success" onclick="addProcess()">➕ Add Process</button>
+            <button class="btn btn-primary" onclick="optimizeResources()">⚡ Optimize</button>
+            <button class="btn btn-danger" onclick="triggerSystemOverload()">💥 Overload System</button>
+            <button class="btn btn-primary" onclick="clearAllProcesses()">🗑️ Clear All</button>
+            <button class="btn btn-primary" id="autoKillBtn" onclick="toggleAutoKill()">🔒 Auto-Kill: ON</button>
+            <div class="status stopped" id="status">⏸️ Stopped</div>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h3>📊 System Resources</h3>
+                <div class="metric">
+                    <span class="metric-label">CPU Usage</span>
+                    <span class="metric-value" id="cpuValue">0%</span>
+                </div>
+                <div style="margin-top:8px; font-size:0.9em; color:#4a5568;">
+                    <span id="cpuExtra">Avg: 0% • Sum: 0% • Max: 0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="cpuProgress" style="width: 0%">0%</div>
+                </div>
+
+                <div class="metric" style="margin-top: 20px;">
+                    <span class="metric-label">Memory Usage</span>
+                    <span class="metric-value" id="memValue">0%</span>
+                </div>
+                <div style="margin-top:8px; font-size:0.9em; color:#4a5568;">
+                    <span id="memExtra">Avg: 0% • Sum: 0% • Max: 0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="memProgress" style="width: 0%">0%</div>
+                </div>
+
+                <div class="metric" style="margin-top: 20px;">
+                    <span class="metric-label">Active Processes</span>
+                    <span class="metric-value" id="processCount">0</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>⚠️ Bottleneck Detection</h3>
+                <div id="bottleneckAlerts">
+                    <div class="alert alert-success">
+                        ✅ System running optimally
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>💡 Allocation Suggestions</h3>
+                <ul class="suggestions" id="suggestions">
+                    <li>System initialized - monitoring resources</li>
+                    <li>All processes running within normal parameters</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3>⚠️ System Health</h3>
+                <div class="metric">
+                    <span class="metric-label">System Load</span>
+                    <span class="metric-value" id="loadValue">Normal</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="loadProgress" style="width: 0%">0%</div>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-label">Thermal State</div>
+                        <div class="stat-value"><span class="thermal-indicator thermal-cool" id="thermalIndicator"></span><span id="thermalStatus">Cool</span></div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Uptime</div>
+                        <div class="stat-value" id="uptimeValue">0:00</div>
+                    </div>
+                </div>
+                <div id="systemStatusAlert" style="margin-top: 15px;"></div>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="card" style="grid-column: 1 / -1;">
+                <h3>📈 Resource Utilization Over Time</h3>
+                <div class="chart-container">
+                    <canvas id="utilizationChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>🔄 Active Processes</h3>
+            <div style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+                <button class="btn btn-primary" style="padding: 8px 16px; font-size: 0.9em;" onclick="sortProcesses('cpu')">Sort by CPU</button>
+                <button class="btn btn-primary" style="padding: 8px 16px; font-size: 0.9em;" onclick="sortProcesses('memory')">Sort by Memory</button>
+                <button class="btn btn-danger" style="padding: 8px 16px; font-size: 0.9em;" onclick="killTopProcess()">❌ Kill Top Process</button>
+            </div>
+            <table class="process-table">
+                <thead>
+                    <tr>
+                        <th>PID</th>
+                        <th>Process Name</th>
+                        <th>CPU %</th>
+                        <th>Memory %</th>
+                        <th>Priority</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="processTableBody">
+                </tbody>
+            </table>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h3>🥧 CPU Distribution</h3>
+                <div class="chart-container">
+                    <canvas id="cpuChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>🥧 Memory Distribution</h3>
+                <div class="chart-container">
+                    <canvas id="memoryChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

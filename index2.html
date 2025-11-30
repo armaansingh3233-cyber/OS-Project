@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced OS Simulator - Realistic Multiprogramming</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #1e3c72;
+            font-size: 2.2em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1em;
+        }
+
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #2a5298;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1e3c72;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(42, 82, 152, 0.4);
+        }
+
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #38a169;
+        }
+
+        .btn-danger {
+            background: #f56565;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #e53e3e;
+        }
+
+        .control-group {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .dropdown {
+            padding: 10px 15px;
+            border: 2px solid #2a5298;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .status {
+            margin-left: auto;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+
+        .status.running {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .status.stopped {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border-left: 5px solid #2a5298;
+        }
+
+        .card h3 {
+            color: #2a5298;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .metric:last-child {
+            border-bottom: none;
+        }
+
+        .metric-label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .metric-value {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #2a5298;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 25px;
+            background: #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #2a5298, #1e3c72);
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .progress-fill.warning {
+            background: linear-gradient(90deg, #f6ad55, #ed8936);
+        }
+
+        .progress-fill.danger {
+            background: linear-gradient(90deg, #fc8181, #f56565);
+        }
+
+        .alert {
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid;
+        }
+
+        .alert-success {
+            background: #c6f6d5;
+            border-color: #38a169;
+            color: #22543d;
+        }
+
+        .alert-warning {
+            background: #feebc8;
+            border-color: #c05621;
+            color: #7c2d12;
+        }
+
+        .alert-danger {
+            background: #fed7d7;
+            border-color: #c53030;
+            color: #742a2a;
+        }
+
+        .queue-container {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+
+        .queue-title {
+            font-weight: 600;
+            color: #2a5298;
+            margin-bottom: 10px;
+        }
+
+        .queue-item {
+            display: inline-block;
+            background: white;
+            border: 2px solid #2a5298;
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin: 5px;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        .queue-item.running {
+            background: #c6f6d5;
+            border-color: #38a169;
+        }
+
+        .queue-item.waiting {
+            background: #feebc8;
+            border-color: #c05621;
+        }
+
+        .queue-item.blocked {
+            background: #fed7d7;
+            border-color: #c53030;
+        }
+
+        .process-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .process-table th {
+            background: #2a5298;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .process-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 0.95em;
+        }
+
+        .process-table tr:hover {
+            background: #f7fafc;
+        }
+
+        .state-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .state-ready {
+            background: #bee3f8;
+            color: #2c5282;
+        }
+
+        .state-running {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .state-waiting {
+            background: #feebc8;
+            color: #7c2d12;
+        }
+
+        .state-blocked {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+
+        .state-terminated {
+            background: #cbd5e0;
+            color: #2d3748;
+        }
+
+        .cache-info {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .cache-level {
+            background: #f7fafc;
+            padding: 10px;
+            border-radius: 8px;
+            border-left: 3px solid #2a5298;
+        }
+
+        .cache-label {
+            font-size: 0.85em;
+            color: #718096;
+            font-weight: 600;
+        }
+
+        .cache-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #2a5298;
+        }
+
+        .numa-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .numa-node {
+            background: #f7fafc;
+            padding: 12px;
+            border-radius: 8px;
+            border: 2px solid #2a5298;
+        }
+
+        .numa-node-label {
+            font-weight: 600;
+            color: #2a5298;
+            margin-bottom: 8px;
+        }
+
+        .numa-stat {
+            font-size: 0.9em;
+            margin: 4px 0;
+        }
+
+        .deadlock-indicator {
+            font-size: 1.2em;
+            font-weight: bold;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .deadlock-safe {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .deadlock-risk {
+            background: #feebc8;
+            color: #7c2d12;
+        }
+
+        .deadlock-detected {
+            background: #fed7d7;
+            color: #742a2a;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 300px;
+            margin-top: 15px;
+        }
+
+        .two-col-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔬 Advanced OS Simulator - Realistic Multiprogramming</h1>
+            <p>Scheduling Algorithms • Virtual Memory • Cache Simulation • Deadlock Detection • NUMA</p>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" onclick="startSimulation()">▶️ Start</button>
+            <button class="btn btn-danger" onclick="stopSimulation()">⏹️ Stop</button>
+            <button class="btn btn-success" onclick="addProcess()">➕ Add Process</button>
+            
+            <div class="control-group">
+                <label style="font-weight: 600;">Scheduler:</label>
+                <select class="dropdown" id="schedulerSelect" onchange="changeScheduler()">
+                    <option value="fcfs">FCFS (First Come First Served)</option>
+                    <option value="rr">Round Robin (Quantum: 10ms)</option>
+                    <option value="priority">Priority Queue</option>
+                    <option value="sjf">Shortest Job First</option>
+                </select>
+            </div>
+
+            <div id="status" class="status stopped">⏸️ Stopped</div>
+        </div>
+
+        <div class="grid">
+            <!-- CPU & Memory Stats -->
+            <div class="card">
+                <h3>📊 System Resources</h3>
+                <div class="metric">
+                    <span class="metric-label">CPU Usage</span>
+                    <span class="metric-value" id="cpuValue">0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="cpuProgress" style="width: 0%">0%</div>
+                </div>
+
+                <div class="metric" style="margin-top: 15px;">
+                    <span class="metric-label">Memory Usage</span>
+                    <span class="metric-value" id="memValue">0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="memProgress" style="width: 0%">0%</div>
+                </div>
+
+                <div class="metric" style="margin-top: 15px;">
+                    <span class="metric-label">Context Switches</span>
+                    <span class="metric-value" id="contextSwitches">0</span>
+                </div>
+            </div>
+
+            <!-- Scheduling Queue -->
+            <div class="card">
+                <h3>📋 Process Scheduler Queue</h3>
+                <div class="metric">
+                    <span class="metric-label">Current Scheduler:</span>
+                    <span class="metric-value" id="currentScheduler" style="font-size: 1em;">FCFS</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Ready Queue Size:</span>
+                    <span class="metric-value" id="readyQueueSize">0</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Waiting Queue Size:</span>
+                    <span class="metric-value" id="waitingQueueSize">0</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Running:</span>
+                    <span class="metric-value" id="runningProcess">--</span>
+                </div>
+                <div id="schedulerInfo" style="margin-top: 15px; font-size: 0.9em; color: #666;"></div>
+            </div>
+
+            <!-- Cache Simulation -->
+            <div class="card">
+                <h3>💾 Cache Hierarchy</h3>
+                <div class="cache-info">
+                    <div class="cache-level">
+                        <div class="cache-label">L1 Cache</div>
+                        <div class="cache-value" id="l1Hit">0%</div>
+                        <div style="font-size: 0.8em; color: #718096;">Hit Rate</div>
+                    </div>
+                    <div class="cache-level">
+                        <div class="cache-label">L2 Cache</div>
+                        <div class="cache-value" id="l2Hit">0%</div>
+                        <div style="font-size: 0.8em; color: #718096;">Hit Rate</div>
+                    </div>
+                    <div class="cache-level">
+                        <div class="cache-label">L3 Cache</div>
+                        <div class="cache-value" id="l3Hit">0%</div>
+                        <div style="font-size: 0.8em; color: #718096;">Hit Rate</div>
+                    </div>
+                </div>
+                <div class="metric" style="margin-top: 15px;">
+                    <span class="metric-label">Cache Misses/sec</span>
+                    <span class="metric-value" id="cacheMisses">0</span>
+                </div>
+            </div>
+
+            <!-- Virtual Memory & Paging -->
+            <div class="card">
+                <h3>🧠 Virtual Memory Management</h3>
+                <div class="metric">
+                    <span class="metric-label">Page Faults</span>
+                    <span class="metric-value" id="pageFaults">0</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Pages Swapped</span>
+                    <span class="metric-value" id="pagesSwapped">0</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Memory Fragmentation</span>
+                    <span class="metric-value" id="fragmentation">0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="fragmentationBar" style="width: 0%">0%</div>
+                </div>
+                <div class="metric" style="margin-top: 15px;">
+                    <span class="metric-label">Page Replacement:</span>
+                    <span class="metric-value" id="pageReplacement" style="font-size: 1em;">LRU</span>
+                </div>
+            </div>
+
+            <!-- Deadlock Detection -->
+            <div class="card">
+                <h3>🔒 Deadlock Detection</h3>
+                <div class="metric">
+                    <span class="metric-label">System State:</span>
+                    <span class="metric-value" id="deadlockState" style="font-size: 1em;">Safe</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Resources in Use:</span>
+                    <span class="metric-value" id="resourcesInUse">0</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Blocked Processes:</span>
+                    <span class="metric-value" id="blockedProcesses">0</span>
+                </div>
+                <div id="deadlockIndicator" class="deadlock-indicator deadlock-safe">✅ No Deadlock</div>
+            </div>
+
+            <!-- NUMA Architecture -->
+            <div class="card">
+                <h3>🏗️ NUMA Architecture (4 Nodes)</h3>
+                <div class="numa-grid">
+                    <div class="numa-node">
+                        <div class="numa-node-label">Node 0 (Local)</div>
+                        <div class="numa-stat">Cores: 2 | Memory: <span id="numa0Mem">0</span>%</div>
+                        <div class="numa-stat">Latency: 10ns</div>
+                        <div style="margin-top: 8px;">
+                            <div style="background: #e2e8f0; height: 15px; border-radius: 4px;">
+                                <div id="numa0Bar" style="background: #2a5298; height: 100%; width: 0%; border-radius: 4px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="numa-node">
+                        <div class="numa-node-label">Node 1</div>
+                        <div class="numa-stat">Cores: 2 | Memory: <span id="numa1Mem">0</span>%</div>
+                        <div class="numa-stat">Latency: 40ns</div>
+                        <div style="margin-top: 8px;">
+                            <div style="background: #e2e8f0; height: 15px; border-radius: 4px;">
+                                <div id="numa1Bar" style="background: #2a5298; height: 100%; width: 0%; border-radius: 4px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="numa-node">
+                        <div class="numa-node-label">Node 2</div>
+                        <div class="numa-stat">Cores: 2 | Memory: <span id="numa2Mem">0</span>%</div>
+                        <div class="numa-stat">Latency: 40ns</div>
+                        <div style="margin-top: 8px;">
+                            <div style="background: #e2e8f0; height: 15px; border-radius: 4px;">
+                                <div id="numa2Bar" style="background: #2a5298; height: 100%; width: 0%; border-radius: 4px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="numa-node">
+                        <div class="numa-node-label">Node 3</div>
+                        <div class="numa-stat">Cores: 2 | Memory: <span id="numa3Mem">0</span>%</div>
+                        <div class="numa-stat">Latency: 40ns</div>
+                        <div style="margin-top: 8px;">
+                            <div style="background: #e2e8f0; height: 15px; border-radius: 4px;">
+                                <div id="numa3Bar" style="background: #2a5298; height: 100%; width: 0%; border-radius: 4px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Process Table -->
+        <div class="card" style="margin-bottom: 20px;">
+            <h3>📋 Process Table</h3>
+            <div class="table-container" style="overflow-x: auto;">
+                <table class="process-table">
+                    <thead>
+                        <tr>
+                            <th>PID</th>
+                            <th>Name</th>
+                            <th>State</th>
+                            <th>CPU Burst (ms)</th>
+                            <th>I/O Wait (ms)</th>
+                            <th>Priority</th>
+                            <th>Page Faults</th>
+                            <th>Cache Hits</th>
+                        </tr>
+                    </thead>
+                    <tbody id="processTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Performance Chart -->
+        <div class="card">
+            <h3>📈 Performance Metrics Over Time</h3>
+            <div class="chart-wrapper">
+                <canvas id="performanceChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== STATE VARIABLES =====
+        let isRunning = false;
+        let processes = [];
+        let processIdCounter = 1000;
+        let currentScheduler = 'fcfs';
+        let contextSwitches = 0;
+        let contextSwitchOverhead = 0.5; // 0.5% overhead per switch
+        let performanceChart;
+        let timeLabels = [];
+        let cpuUsageData = [];
+        let contextSwitchData = [];
+
+        // Cache stats
+        let l1Hits = 0, l1Misses = 0;
+        let l2Hits = 0, l2Misses = 0;
+        let l3Hits = 0, l3Misses = 0;
+        let cacheMissCount = 0;
+
+        // Virtual memory
+        let pageFaults = 0;
+        let pagesSwapped = 0;
+        let memoryFragmentation = 0;
+
+        // Deadlock detection
+        let resourcesInUse = 0;
+        let systemSafe = true;
+
+        // NUMA
+        let numaNodes = [
+            { coreCount: 2, memoryUsage: 0, localLatency: 10, remoteLatency: 40 },
+            { coreCount: 2, memoryUsage: 0, localLatency: 40, remoteLatency: 40 },
+            { coreCount: 2, memoryUsage: 0, localLatency: 40, remoteLatency: 40 },
+            { coreCount: 2, memoryUsage: 0, localLatency: 40, remoteLatency: 40 }
+        ];
+
+        // Process states
+        const PROCESS_STATES = {
+            READY: 'ready',
+            RUNNING: 'running',
+            WAITING: 'waiting',
+            BLOCKED: 'blocked',
+            TERMINATED: 'terminated'
+        };
+
+        const processNames = [
+            'Browser', 'Database', 'Web Server', 'Python Script',
+            'Java App', 'Node.js', 'Docker', 'Video Encoder',
+            'File Indexer', 'Backup', 'Compiler', 'Cache Worker'
+        ];
+
+        // ===== PROCESS MODEL =====
+        function createProcess() {
+            return {
+                pid: processIdCounter++,
+                name: processNames[Math.floor(Math.random() * processNames.length)],
+                state: PROCESS_STATES.READY,
+                priority: Math.floor(Math.random() * 3), // 0=high, 1=medium, 2=low
+                totalBurstTime: Math.random() * 100 + 50, // 50-150ms
+                remainingBurstTime: 0,
+                ioWaitTime: Math.random() * 80 + 20, // 20-100ms
+                remainingIOTime: 0,
+                cpuUsedTime: 0,
+                pageFaults: 0,
+                cacheHits: 0,
+                quantumRemaining: 10, // for round robin
+                numaNode: Math.floor(Math.random() * 4),
+                createdAt: Date.now(),
+                startedAt: null,
+                contextSwitchCount: 0
+            };
+        }
+
+        // ===== SCHEDULING ALGORITHMS =====
+        function scheduleProcess() {
+            const readyQueue = processes.filter(p => p.state === PROCESS_STATES.READY);
+            if (readyQueue.length === 0) return null;
+
+            let selectedProcess = null;
+
+            switch (currentScheduler) {
+                case 'fcfs':
+                    selectedProcess = readyQueue[0];
+                    break;
+                case 'rr':
+                    selectedProcess = readyQueue[0];
+                    if (!selectedProcess.quantumRemaining) selectedProcess.quantumRemaining = 10;
+                    break;
+                case 'priority':
+                    selectedProcess = readyQueue.reduce((prev, curr) =>
+                        curr.priority < prev.priority ? curr : prev
+                    );
+                    break;
+                case 'sjf':
+                    selectedProcess = readyQueue.reduce((prev, curr) =>
+                        curr.remainingBurstTime < prev.remainingBurstTime ? curr : prev
+                    );
+                    break;
+            }
+
+            return selectedProcess;
+        }
+
+        function executeTimeSlice() {
+            const runningProc = processes.find(p => p.state === PROCESS_STATES.RUNNING);
+            if (!runningProc) return;
+
+            const timeSlice = 20; // 20ms per execution
+            const executedTime = Math.min(timeSlice, runningProc.remainingBurstTime);
+            
+            runningProc.remainingBurstTime -= executedTime;
+            runningProc.cpuUsedTime += executedTime;
+
+            // Simulate realistic cache behavior (L1→L2→L3 hierarchy)
+            for (let i = 0; i < 10; i++) {
+                if (Math.random() < 0.75) {
+                    l1Hits++;
+                    runningProc.cacheHits++;
+                } else if (Math.random() < 0.85) {
+                    l1Misses++;
+                    if (Math.random() < 0.8) {
+                        l2Hits++;
+                    } else {
+                        l2Misses++;
+                        if (Math.random() < 0.9) {
+                            l3Hits++;
+                        } else {
+                            l3Misses++;
+                            cacheMissCount++;
+                        }
+                    }
+                } else {
+                    l1Misses++;
+                    l2Misses++;
+                    l3Misses++;
+                    cacheMissCount++;
+                    // Page fault probability increases with cache misses
+                    if (Math.random() < 0.35) {
+                        pageFaults++;
+                        runningProc.pageFaults++;
+                        pagesSwapped++;
+                    }
+                }
+            }
+
+            // Process quantum for round robin
+            if (currentScheduler === 'rr') {
+                runningProc.quantumRemaining -= executedTime;
+                if (runningProc.quantumRemaining <= 0 && runningProc.remainingBurstTime > 0) {
+                    runningProc.state = PROCESS_STATES.READY;
+                    runningProc.quantumRemaining = 10;
+                    contextSwitches++;
+                }
+            }
+
+            if (runningProc.remainingBurstTime <= 0) {
+                // I/O wait phase
+                runningProc.state = PROCESS_STATES.WAITING;
+                runningProc.remainingIOTime = runningProc.ioWaitTime;
+            }
+        }
+
+        function handleIOWait() {
+            const waitingProcs = processes.filter(p => p.state === PROCESS_STATES.WAITING);
+            waitingProcs.forEach(proc => {
+                proc.remainingIOTime -= 20; // matches execution slice
+                if (proc.remainingIOTime <= 0) {
+                    proc.state = PROCESS_STATES.READY;
+                    proc.remainingBurstTime = Math.random() * 100 + 50;
+                    proc.totalBurstTime = proc.remainingBurstTime;
+                    contextSwitches++;
+                }
+            });
+        }
+
+        // ===== SIMULATION LOOP =====
+        function startSimulation() {
+            if (isRunning) return;
+            isRunning = true;
+            document.getElementById('status').className = 'status running';
+            document.getElementById('status').innerHTML = '▶️ Running';
+
+            if (processes.length === 0) {
+                for (let i = 0; i < 5; i++) {
+                    const proc = createProcess();
+                    proc.remainingBurstTime = proc.totalBurstTime;
+                    processes.push(proc);
+                }
+            }
+
+            if (!performanceChart) {
+                setTimeout(initChart, 100);
+            }
+            simulationLoop();
+        }
+
+        function stopSimulation() {
+            isRunning = false;
+            document.getElementById('status').className = 'status stopped';
+            document.getElementById('status').innerHTML = '⏸️ Stopped';
+        }
+
+        function addProcess() {
+            const proc = createProcess();
+            proc.remainingBurstTime = proc.totalBurstTime;
+            processes.push(proc);
+            updateDisplay();
+        }
+
+        function simulationLoop() {
+            if (!isRunning) return;
+
+            handleIOWait();
+
+            let runningProc = processes.find(p => p.state === PROCESS_STATES.RUNNING);
+            if (!runningProc) {
+                const nextProc = scheduleProcess();
+                if (nextProc) {
+                    nextProc.state = PROCESS_STATES.RUNNING;
+                    if (!nextProc.startedAt) nextProc.startedAt = Date.now();
+                    nextProc.contextSwitchCount++;
+                    runningProc = nextProc;
+                }
+            }
+
+            if (runningProc && runningProc.state === PROCESS_STATES.RUNNING) {
+                executeTimeSlice();
+            }
+
+            const blockedProcs = processes.filter(p => p.state === PROCESS_STATES.BLOCKED);
+            systemSafe = blockedProcs.length < 2;
+
+            processes = processes.filter(p => {
+                const age = Date.now() - p.createdAt;
+                if (p.cpuUsedTime > 300 && p.state === PROCESS_STATES.READY) {
+                    p.state = PROCESS_STATES.TERMINATED;
+                }
+                return p.state !== PROCESS_STATES.TERMINATED || age < 5000;
+            });
+
+            updateDisplay();
+            setTimeout(simulationLoop, 100);
+        }
+
+        // ===== DISPLAY & CHARTS =====
+        function initChart() {
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+            performanceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: timeLabels,
+                    datasets: [{
+                        label: 'CPU Usage %',
+                        data: cpuUsageData,
+                        borderColor: '#2a5298',
+                        backgroundColor: 'rgba(42, 82, 152, 0.1)',
+                        tension: 0.4
+                    }, {
+                        label: 'Context Switches',
+                        data: contextSwitchData,
+                        borderColor: '#ed8936',
+                        backgroundColor: 'rgba(237, 137, 54, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateDisplay() {
+            // Calculate CPU usage
+            const totalProcess = processes.length || 1;
+            const runningProc = processes.find(p => p.state === PROCESS_STATES.RUNNING);
+            const cpuUsage = runningProc ? 70 + Math.random() * 20 : Math.random() * 30;
+
+            // Calculate memory usage
+            const memUsage = (processes.length / 20) * 100;
+
+            // Update metrics
+            document.getElementById('cpuValue').textContent = cpuUsage.toFixed(1) + '%';
+            document.getElementById('memValue').textContent = memUsage.toFixed(1) + '%';
+            document.getElementById('contextSwitches').textContent = contextSwitches;
+
+            // Update scheduler info
+            document.getElementById('currentScheduler').textContent = 
+                currentScheduler === 'fcfs' ? 'FCFS' : 
+                currentScheduler === 'rr' ? 'Round Robin' :
+                currentScheduler === 'priority' ? 'Priority Queue' : 'SJF';
+
+            const readyQueue = processes.filter(p => p.state === PROCESS_STATES.READY);
+            const waitingQueue = processes.filter(p => p.state === PROCESS_STATES.WAITING);
+            document.getElementById('readyQueueSize').textContent = readyQueue.length;
+            document.getElementById('waitingQueueSize').textContent = waitingQueue.length;
+            
+            const running = processes.find(p => p.state === PROCESS_STATES.RUNNING);
+            document.getElementById('runningProcess').textContent = running ? `P${running.pid}` : '--';
+
+            // Cache stats
+            const l1HitRate = (l1Hits / (l1Hits + l1Misses || 1) * 100).toFixed(0);
+            const l2HitRate = (l2Hits / (l2Hits + l2Misses || 1) * 100).toFixed(0);
+            const l3HitRate = (l3Hits / (l3Hits + l3Misses || 1) * 100).toFixed(0);
+            document.getElementById('l1Hit').textContent = l1HitRate + '%';
+            document.getElementById('l2Hit').textContent = l2HitRate + '%';
+            document.getElementById('l3Hit').textContent = l3HitRate + '%';
+            document.getElementById('cacheMisses').textContent = cacheMissCount;
+
+            // Virtual memory
+            document.getElementById('pageFaults').textContent = pageFaults;
+            document.getElementById('pagesSwapped').textContent = pagesSwapped;
+            memoryFragmentation = Math.min(100, (pageFaults / (processes.length + 1)) * 5);
+            document.getElementById('fragmentation').textContent = memoryFragmentation.toFixed(1) + '%';
+            document.getElementById('fragmentationBar').style.width = memoryFragmentation + '%';
+
+            // Deadlock detection
+            const blockedProcs = processes.filter(p => p.state === PROCESS_STATES.BLOCKED).length;
+            document.getElementById('blockedProcesses').textContent = blockedProcs;
+            document.getElementById('deadlockState').textContent = systemSafe ? 'Safe' : 'Unsafe';
+            const deadlockDiv = document.getElementById('deadlockIndicator');
+            if (blockedProcs >= 3) {
+                deadlockDiv.className = 'deadlock-indicator deadlock-detected';
+                deadlockDiv.textContent = '⚠️ DEADLOCK RISK!';
+            } else {
+                deadlockDiv.className = 'deadlock-indicator deadlock-safe';
+                deadlockDiv.textContent = '✅ No Deadlock';
+            }
+
+            // NUMA load distribution with proper capping
+            numaNodes.forEach((node, idx) => {
+                const procsOnNode = processes.filter(p => p.numaNode === idx).length;
+                const memLoad = Math.min(100, (procsOnNode / Math.max(1, totalProcess)) * 100);
+                node.memoryUsage = memLoad;
+                document.getElementById(`numa${idx}Mem`).textContent = memLoad.toFixed(0);
+                document.getElementById(`numa${idx}Bar`).style.width = memLoad + '%';
+            });
+
+            // Update process table
+            updateProcessTable();
+
+            // Update chart
+            timeLabels.push(new Date().toLocaleTimeString());
+            cpuUsageData.push(cpuUsage);
+            contextSwitchData.push(Math.min(contextSwitches, 100));
+            if (timeLabels.length > 20) {
+                timeLabels.shift();
+                cpuUsageData.shift();
+                contextSwitchData.shift();
+            }
+            if (performanceChart) performanceChart.update();
+        }
+
+        function updateProcessTable() {
+            const tbody = document.getElementById('processTableBody');
+            tbody.innerHTML = '';
+
+            processes.forEach(proc => {
+                const row = tbody.insertRow();
+                const stateClass = `state-${proc.state}`;
+                row.innerHTML = `
+                    <td>${proc.pid}</td>
+                    <td>${proc.name}</td>
+                    <td><span class="state-badge ${stateClass}">${proc.state.toUpperCase()}</span></td>
+                    <td>${proc.remainingBurstTime.toFixed(0)}ms</td>
+                    <td>${proc.remainingIOTime.toFixed(0)}ms</td>
+                    <td>${proc.priority === 0 ? 'High' : proc.priority === 1 ? 'Medium' : 'Low'}</td>
+                    <td>${proc.pageFaults}</td>
+                    <td>${proc.cacheHits}</td>
+                `;
+            });
+        }
+
+        function changeScheduler() {
+            currentScheduler = document.getElementById('schedulerSelect').value;
+            contextSwitches = 0;
+            updateDisplay();
+        }
+
+        // Initialize
+        window.onload = function() {
+            updateDisplay();
+        };
+    </script>
+</body>
+</html>
